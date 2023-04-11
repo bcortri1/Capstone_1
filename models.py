@@ -118,7 +118,6 @@ class Response(db.Model):
     def __repr__(self):
         return f"Question: {self.text}, Answer: {self.answer}"
 
-    #id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     _text = db.Column(db.String(40))
     player_id = db.Column(db.Integer, db.ForeignKey(
         "players.id"), primary_key=True, nullable=False)
