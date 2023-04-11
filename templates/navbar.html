@@ -1,0 +1,42 @@
+<nav class="navbar bg-dark navbar-dark">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#coll" aria-controls="navbarToggleExternalContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    {% if player is defined %}
+        <h5 id="p{{player.num}}-nav" class="text-white my-auto">{{player.name}}</h5>
+        <img class="card-img" style= "max-height: 40px; width: auto;" src="/static/assets/pictures/{{player.num}}.png" alt="{{player.num}}.png">
+    {% endif %}
+</nav>
+    <div class="collapse" id="coll">
+        <div class="bg-dark ">
+            <ul class="navbar-nav col">
+                <div class="dropdown-divider"></div>
+                {% if g.host != None %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/game"><h5 class="text-white text-center text-lg-left pl-3 p-1">Game Select</h5></a>
+                </li>
+                <div class="dropdown-divider"></div>
+                <li class="nav-item">
+                    <a class="nav-link" href="/logout"><h5 class="text-white text-center text-lg-left pl-3 p-1">Log Out</h5></a>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/player/join"><h5 class="text-white text-center text-lg-left pl-3 p-1">Join Room</h5></a>
+                </li>
+                <div class="dropdown-divider"></div>
+                <li class="nav-item">
+                    <a class="nav-link" href="/login"><h5 class="text-white text-center text-lg-left pl-3 p-1">Log In</h5></a>
+                </li>
+                <div class="dropdown-divider"></div>
+                <li class="nav-item">
+                    <a class="nav-link" href="/register"><h5 class="text-white text-center text-lg-left pl-3 p-1">Register</h5></a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    {% for category, message in get_flashed_messages(with_categories=True) %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+    
+    

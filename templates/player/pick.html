@@ -1,0 +1,8 @@
+<form method ="POST">
+{{ form.hidden_tag() }}
+    {% for response in responses %}
+        <span id="pick-{{response.id}}" class="btn-pick card bg-dark text-white mx-auto" style="width: fit-content; border-radius: 10px;">
+            <button name="response" value="{{response.id}}"><h4 class="card-title font-weight-bold p-2 my-auto">{{response.text}}</h4></button>
+        </span>
+    {% endfor %}
+</form>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+    <div id="game-container" class="text-center p-5">
+        
+
+        {% include "player/response.html" %}
+        <div id = "choice-container"></div>
+        {% if responses is defined %}
+            {% include "player/pick.html" %}
+        {% elif start == false %}
+            {% include "player/start-screen.html" %}
+        {% elif wait == false %}
+            {% include "player/start-screen.html" %}
+
+        {% endif %}
+    </div>
+    <script>
+        const currPlayer = "{{player.id}}";
+        const currNum = "{{player.num}}";
+        const currGame = "{{player.game_id}}";
+        const qLength = "{{player.game.questions | length}}";
+    </script>
+    <script src="/static/js/deceptionary_player.js"></script>    
+{% endblock %}

@@ -1,0 +1,50 @@
+<div id="start-container" class="row justify-content-center mt-5 slide-in-left" style="height: max-content;">
+    <div id="game-col" class="col-6">
+        <div class="row justify-content-center">
+            <div class="card bg-dark text-white m-3 text-center mx-auto"
+                style="width: fit-content; border-radius: 25px;">
+                <div class="card-body">
+                    <img class="card-img" src="/static/assets/pictures/deceptionary.png" alt="Deceptionary"
+                        style="border-radius: 25px;">
+                </div>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="text-white m-3 text-center mx-auto" style="width: fit-content; ">
+                <h4 class="p-2 font-weight-bold">Press</h4>
+                <span class="card bg-dark text-white mx-auto" style="width: fit-content; border-radius: 10px;">
+                    <h4 class="card-title font-weight-bold p-2 my-auto">START GAME</h4>
+                </span>
+                <h4 class="p-2 font-weight-bold">when everyone has joined.</h4><br>
+
+                <h4 class="p-2 font-weight-bold">THE ROOM CODE IS:</h4>
+                <div class="card bg-dark text-white mx-auto" style="width: fit-content; border-radius: 10px;">
+                    <h2 class="card-title font-weight-bold my-auto p-2" style="font-size: 5rem;">
+                        {{game.room_code}}
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--PLAYER SECTION -->
+    <div id="player-col" class="col-4 mt-2 flex-nowrap">
+        {% for player_num in player_limit %}
+        <div class="d-flex flex-column" style="float: right; width: 70%;">
+            <div class="card bg-dark text-white m-2"
+                style="display:block; width:auto; height:5rem; border-radius:10px;">
+                <div class="row">
+                    <div class="col-5">
+                        <img id="p{{player_num}}-img" class="card-img shake{{player_num}} m-auto"
+                            style="display:inline-block; height:4.9rem; width:4.9rem;"
+                            src="/static/assets/pictures/{{player_num}}.png" alt="Player{{player_num}} Picture">
+                    </div>
+                    <div class="col-7 my-auto">
+                        <h3 style="display:inline-block; width:fit-content;" id="p{{player_num}}">Join</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% endfor %}
+    </div>
+</div>

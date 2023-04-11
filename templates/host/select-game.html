@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row mx-auto w-75">
+    <div class="col">
+        <div class="card bg-dark text-white m-3 mx-auto" style="width: 18rem; height:22rem;">
+            <img class="card-img-top" style="height: 113.5px;" src="/static/assets/pictures/deceptionary.png" alt="Deceptionary">
+            <div class="card-body">
+            <h5 class="card-title">Deceptionary</h5>
+            <p class="card-text">Trick your friends with lies while avoiding theirs. Show off that you are the true trivia _______.</p>
+
+            <form action="/game/select" method="POST">
+                {{ form.hidden_tag() }}
+                <button class="btn btn-primary" style="position:absolute; bottom: 24px;">Start Game</button>
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card bg-dark text-white m-3 mx-auto" style="width: 18rem; height:22rem;">
+            <img class="card-img-top" style="height: 113.5px;" src="/static/assets/pictures/soon.png" alt="Coming Soon">
+            <div class="card-body">
+            <h5 class="card-title">TBD</h5>
+            <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            <form>
+
+                <button class="btn btn-primary" style="position:absolute; bottom: 24px;">TBD</button>
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card bg-dark text-white m-3 mx-auto" style="width: 18rem; height:22rem;">
+            <img class="card-img-top" style="height: 113.5px;" src="/static/assets/pictures/soon.png" alt="Coming Soon">
+            <div class="card-body">
+            <h5 class="card-title">TBD</h5>
+            <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. </p>
+            <form>
+
+                <button class="btn btn-primary" style="position:absolute; bottom: 24px;">TBD</button>
+            </form>
+            </div>
+        </div>
+    </div>
+</div>
+  
+{% endblock %}
