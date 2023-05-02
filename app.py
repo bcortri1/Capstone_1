@@ -43,11 +43,14 @@ def add_host_to_g():
     """If we're logged in, add curr host to Flask global."""
     if CURR_HOST_KEY in session:
         g.host = Host.query.get(session[CURR_HOST_KEY])
+        if (g.host != None):
+            g.game = Game.query.filter(Game.host_username == g.host.username).first()
+        else:
+            session.pop(CURR_HOST_KEY, None)
+            g.host = None
     else:
         session.pop(CURR_HOST_KEY, None)
         g.host = None
-        
-    
 
 
 @app.before_request
@@ -55,9 +58,16 @@ def add_player_to_g():
     """If we're a player add curr player to Flask global."""
     if CURR_PLAYER_KEY in session:
         g.player = Player.query.get(session[CURR_PLAYER_KEY])
+        if (g.player != None):
+            g.game = g.player.game
+        else:
+            session.pop(CURR_PLAYER_KEY, None)
+            g.player = None
     else:
         session.pop(CURR_PLAYER_KEY, None)
         g.player = None
+        
+
 
 
 def end_game():
@@ -84,7 +94,7 @@ def do_logout():
 def create_game():
     """Creates new game in database and returns game object"""
     room_code = Game.create_code()
-    game = Game(host_username=g.host.username, room_code=room_code)
+    game = Game(host_username=g.host.username, room_code=room_code, curr_question_num = 0)
     db.session.add(game)
     db.session.commit()
     return game
@@ -109,7 +119,7 @@ def get_player_scores():
 
 def get_facts():
     """Returns a list of 2 different facts, increasing later"""
-    limit = 1
+    limit = 3
     api_url = f'https://api.api-ninjas.com/v1/facts?limit={limit}'
     response = requests.get(api_url, headers={'X-Api-Key': API_KEY})
     if response.status_code == requests.codes.ok:
@@ -179,7 +189,7 @@ def create_blank(word_list, gram_list):
             return [sentence, answer]
 
     # In the unlikely event that a fact with no noun is found returns a default fact
-    return ["The Ancient Romans boiled vinegar and _______ to make an energy drink (*default joke)", "goat poop"]
+    return ["The Ancient Romans boiled vinegar and _______ to make an energy drink (*default question)", "goat poop"]
 
 
 def create_questions(game_id):
@@ -193,9 +203,10 @@ def create_questions(game_id):
         question = Question(
             game_id=game_id, text=question[0], answer=question[1])
         db.session.add(question)
+        db.session.commit()
         trivia_list.append(question.serialize())
-    db.session.commit()
-    return trivia_list
+
+
 
 # =====================================HOME============================================
 
@@ -271,7 +282,7 @@ def game_select():
     if form.validate_on_submit():
         if g.host != None:
             game = create_game()
-            questions = create_questions(game.id)
+            create_questions(game.id)
             return redirect(f"/game")
         else:
             flash("Not a valid host", "danger")
@@ -287,11 +298,10 @@ def game_host():
     player_limit = range(1, 9)
 
     if g.host != None:
-        game = Game.query.filter(Game.host_username == g.host.username).first()
-        if (game != None):
-            questions = Question.query.filter(
-                Question.game_id == game.id).all()
-            return render_template('game/deceptionary.html', game=game, player_limit=player_limit, questions=questions)
+        print(g.game)
+        if (g.game != None):
+            
+            return render_template('game/deceptionary.html', game=g.game, player_limit=player_limit, qLength= len(g.game.questions))
         else:
             flash("No game with that id!", "danger")
             return redirect('/game/select')
@@ -303,80 +313,82 @@ def game_host():
 @app.route('/game/status', methods=["GET"])
 def game_status():
     """Will return the start status"""
-    game = None
-    if (g.host != None):
-        game = Game.query.filter(Game.host_username == g.host.username).first()
-    elif (g.player != None):
-        game = g.player.game
 
-    if (game != None):
-        return jsonify(gameStart=game.started, playerCount=len(game.players), status=200)
+    if (g.game != None):
+        return jsonify(gameStart=g.game.started, playerCount=len(g.game.players), status=200)
 
     flash("Error", "danger")
     return redirect("/")
 
 
 @app.route('/game/question', methods=["GET"])
-def game_current_question():
-    if (g.host != None):
-        game = Game.query.filter(Game.host_username == g.host.username).first()
-    elif (g.player != None):
-        game = g.player.game
-    else:
-        game = None
-        
-    if (game != None):
-        curr_question = game.get_curr_question()
-        if (curr_question == None):
-            return "Game Over"
+def game_current_question(): 
+    if (g.game != None):
 
-        if (game.started):
-            if (curr_question.start_time == 0):
+        if (g.game.started):
+            curr_question = g.game.curr_question
+            if (curr_question == None):
+                return "Game Over"
+            
+            elif (curr_question.start_time == 0):
                 curr_question.start_time = time.time()
+                db.session.commit()
+                
 
             curr_question.update_stage()
             db.session.commit()
-        qId = curr_question.id
-        qText = curr_question.text
-        qAnswer = curr_question.answer
-        qTimer = curr_question.time_elapsed
-        qStage = curr_question.stage
-
-        return jsonify(qId=qId, qText=qText, qAnswer=qAnswer, qTimer=qTimer, qStage=qStage, status=200)
+            qId = curr_question.id
+            qText = curr_question.text
+            qAnswer = curr_question.answer
+            qTimer = curr_question.time_elapsed
+            qStage = curr_question.stage
+            
+            return jsonify(qId=qId, qText=qText, qAnswer=qAnswer, qTimer=qTimer, qStage=qStage, status=200)
 
     flash("Error", "danger")
     return redirect("/")
 
-# Make test requests here
 
+@app.route('/player/question', methods=["GET"])
+def player_current_question(): 
+    if not hasattr(g,'game'):
+        return "Game Over"
+    
+    if (g.game != None):
 
+        if (g.game.started):
+            curr_question = g.game.curr_question
+            if (curr_question == None):
+                return "Game Over"
+            
+            qId = curr_question.id
+            qText = curr_question.text
+            qAnswer = curr_question.answer
+            qTimer = curr_question.time_elapsed
+            qStage = curr_question.stage
+            
+            return jsonify(qId=qId, qText=qText, qAnswer=qAnswer, qTimer=qTimer, qStage=qStage, status=200)
+
+    flash("Error", "danger")
+    return "Game Over"
 
 
 
 @app.route('/game/players', methods=["GET"])
 def game_host_players_update():
     """To get player names, scores, etc"""
-    game = None
-    if g.host != None:
-        game = Game.query.filter(Game.host_username == g.host.username).first()
-    if g.player != None:
-        game = g.player.game
-    if game != None:
-        players = [player.serialize() for player in game.players]
+    if g.game != None:
+        players = [player.serialize() for player in g.game.players]
         return players
-
-    return "Not Authorized"
+    else:
+        return "Not Authorized"
 
 
 @app.route('/game/responses', methods=["POST"])
 def game_get_responses():
     """To get question responses"""
-    if g.host != None:
-        game = Game.query.filter(Game.host_username == g.host.username).first()
-    if g.player != None:
-        game = g.player.game
 
-    if game != None:
+    if g.game != None:
         qId = request.json.get('qId')
         question = Question.query.get(qId)
         answer = question.answer
@@ -384,38 +396,36 @@ def game_get_responses():
         responses.append({'id': 'answer', 'text': answer,
                          'player_id': 'answer', 'question_id': question.id})
         responses = sample(responses, len(responses))
-        print(responses)
         return jsonify(responses, 200)
 
     return "Not Authorized"
 
-
+#SHOULD BE THE ONLY THING THAT CHANGES TO NEXT QUESTION
 @app.route('/game/next', methods=["POST"])
 def game_next_question():
     """To advance to the next question"""
     if g.host != None:
-        game = Game.query.filter(Game.host_username == g.host.username).first()
         question = Question.query.get(request.json.get("qId"))
-        if question == game.get_curr_question():
-            game.curr_question_num += 1
+        if question == g.game.curr_question:
+            g.game.curr_question_num = g.game.curr_question_num + 1
             db.session.commit()
-            return "Next Question"
+            return jsonify(message = "Next Question", status = 200)
         else:
             return "Game Over"
-    return "Not Authorized"
+    else:    
+        return "Not Authorized"
 
-
+#SHOULD BE THE ONLY THING THAT ENDS THE GAME
 @app.route('/game/end', methods=["GET", "POST"])
 def game_end_send_score():
     """Ends Game"""
     if g.host != None:
-        game = Game.query.filter(Game.host_username == g.host.username).first()
-        if (game != None):
+        if (g.game != None):
             players_sorted = get_player_scores()
             end_game()
             return jsonify(players_sorted)
-
-    return "Not Authorized"
+    else:
+        return "Not Authorized"
 
 # ======================================PLAYER=======================================================
 
@@ -445,45 +455,40 @@ def game_join():
 def player_screen():
     """Game player screen"""
     if g.player != None:
-        game = g.player.game
-        questions = [question.serialize() for question in game.questions]
-        question_ids = [question["id"] for question in questions]
-        return render_template('player/deceptionary.html', player=g.player, question_ids=question_ids, start=game.started)
+        return render_template('player/deceptionary.html', player=g.player, start=g.game.started)
     else:
         flash("Unable to join room!", "danger")
 
     return redirect('/')
 
 
-@app.route('/player/start', methods=["GET"])
+#Should only respond to player 1
+@app.route('/player/start', methods=["POST"])
 def player_start():
     """Handles 1st players ability to start game"""
     if (g.player != None) and (g.player.num == 1):
-        game = g.player.game
-        if (g.player.num == 1):
-            game.started = True
-            db.session.commit()
-            #deceptionaryMain(game)
-            return jsonify(gameStart=game.started, status=200)
-        else:
-            return jsonify(gameStart="Error", status=404)
+        g.game.started = True
+        db.session.commit()
+        return jsonify(gameStart=g.game.started, status=200)
+    
+    else:
+        return 401
 
-    flash("Error", "danger")
-    return redirect("/")
+
 
 #Redo so it does not need form validation IE POST ONLY
 @app.route('/player/response', methods=["POST"])
 def player_response_form():
     """Handles responses"""
     if g.player != None:
-        game = g.player.game
-        question = game.get_curr_question()
         text = request.json.get('text')
+        qId = request.json.get('qId')
+        question = Question.query.get(qId)
         response = Response.query.filter_by(question_id = question.id, player_id = g.player.id).first()
         if (response == None):
             response = Response(text=text, player_id=g.player.id, question_id=question.id)
             db.session.add(response)
-            question.update_stage()
+            #question.update_stage()
             db.session.commit()
             return "Accepted", 202
 
@@ -496,13 +501,18 @@ def player_response_form():
 def player_response_choice():
     """Handles player choices"""
     if (g.player != None):
-        choice = request.json.get('choice')
-        game = g.player.game
-        if (choice == "answer"):
+
+        choiceId = request.json.get("choice")
+        question = g.game.curr_question
+
+        if (choiceId == "answer"):
             g.player.score += 1000
         else:
-            player = Player.query.get(choice)
+            player = Player.query.get(choiceId)
             player.score +=500
+        question.votes += 1
+        db.session.commit()
+        question.update_stage()
         db.session.commit()
         return "Accepted", 202
     return redirect("/")
@@ -511,3 +521,5 @@ def player_response_choice():
 
 
 
+
+    

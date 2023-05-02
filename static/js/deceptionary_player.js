@@ -10,26 +10,27 @@ let gameEnd = false;
 let gameStart = false;
 let votingTime = false;
 let responseTime = false;
+let waitTime = true;
 let currQuestion ="";
 
 
 async function gamePlayerMain() {
     //Will get the current question Info and time
-        currQuestion = await getCurrQuestion()
-        qId = currQuestion.qId;
-        qText = currQuestion.qText; //Possible Future Add blurb on player screen
-        //qAnswer = currQuestion.qAnswer; //Not useful for players
-        //qTimer = currQuestion.qTimer; //Not useful for players
-        qStage = currQuestion.qStage; //Options are voting, response, answer
-
+    setTimeout(function(){waitTime = false}, 5000)
     
-        setInterval(async function(){
-
+        playerInterval = setInterval(async function(){
+            if (waitTime === false){
+                currQuestion = await getCurrQuestion()
+                qId = currQuestion.qId;
+                qText = currQuestion.qText;
+                qStage = currQuestion.qStage; //Options are voting, response, answer
+            }
 
     
             if (gameEnd != true){
                 if (qStage === "answer"){
                     votingTime = false;
+                    waitTime = false;
                     //Should do nothing until answer time is over
                     //Would be where "like votes" would happen
                 }
@@ -40,13 +41,15 @@ async function gamePlayerMain() {
                         appendChoices(qId)
                         votingTime = true;
                         responseTime = false;
+                        waitTime = true;
                     }
                 }
                 else if ((qStage === "response")) {
                     //Show response form ONCE
                     if(responseTime != true){
                         $responseContainer.show()
-                        responseTime = true
+                        responseTime = true;
+                        waitTime = true;
                     }
 
                 }
@@ -59,9 +62,10 @@ async function gamePlayerMain() {
                 //Show A YOU WIN Logo if player won
                 //Show button to go back to HOME SCREEN
                 console.log("Game is Over ")
+                window.location.replace("./player/join")
             }
     
-        },2000)
+        },5000)
     
     }
 
@@ -69,10 +73,9 @@ async function gamePlayerMain() {
 
 //Handles start game button request to server
 async function startGameRequest(){
-    let response = await axios.get(`/player/start`);
+    let response = await axios.post(`/player/start`,{});
     if (response.gameStart == true) {
         $startBtn.remove();
-        $playerText.remove();
     }
 }
 
@@ -89,23 +92,25 @@ $choiceContainer.on("click",".btn-choice", async function(evt){
         choice: $(this).attr('id')
     })
     $choiceContainer.empty()
+    waitTime = false;
 })
 
 //Response Button Event Handler
 $responseBtn.on("click", async function(evt){
     evt.preventDefault();
-    axios.post("/player/response",{
-        text: $("#text").val()
+    let resp = axios.post("/player/response",{
+        text: $("#text").val(),
+        qId: currQuestion.qId
     })
     $responseContainer.hide()
-    currQuestion = await getCurrQuestion()
+    waitTime = false
 })
 
 
 //General player poll
 function playerGamePoll(){
-    let generalPlayerPoll = setInterval( async function(){
-        let serverResp = await axios.get(`/game/status`);
+    generalPlayerPoll = setInterval( async function(){
+        let serverResp = await axios.get("/game/status");
         started = serverResp.data.gameStart
         if(started){
             gamePlayerMain()
@@ -119,30 +124,31 @@ function playerGamePoll(){
 
 //Returns an Object with all necessary question Info
 async function getCurrQuestion(){
-    let serverResp = await axios.get("/game/question")
-    qId = serverResp.data.qId
-    qText = serverResp.data.qText
-    qAnswer = serverResp.data.qAnswer
-    qTimer = serverResp.data.qTimer
-    qStage = serverResp.data.qStage
+    let serverResp = await axios.get("/player/question")
+    let qId = serverResp.data.qId
+    let qText = serverResp.data.qText
+    let qAnswer = serverResp.data.qAnswer
+    let qTimer = serverResp.data.qTimer
+    let qStage = serverResp.data.qStage
+    console.log({qId: qId, qText: qText, qAnswer: qAnswer, qTimer: qTimer, qStage: qStage})
     return {qId: qId, qText: qText, qAnswer: qAnswer, qTimer: qTimer, qStage: qStage}
 
 }
 
 
-//Polls server until game starts should be used by first player
-function playerStartPoll(){
-        const startPoll = setInterval( async function(){
-            let serverResp = await axios.get(`/game/status`);
-                started = serverResp.data.gameStart
-                console.log(started)
-            if (started === true){
-                gamePlayerMain()
-                clearInterval(startPoll)
-            }
+// //Polls server until game starts should be used by first player
+// function playerStartPoll(){
+//         const startPoll = setInterval( async function(){
+//             let serverResp = await axios.get(`/game/status`);
+//                 started = serverResp.data.gameStart
+//                 console.log(started)
+//             if (started === true){
+//                 gamePlayerMain()
+//                 clearInterval(startPoll)
+//             }
             
-        }, 2000)
-}
+//         }, 3000)
+// }
 
 
 
@@ -162,7 +168,6 @@ async function appendChoices(qId){
     choiceList = serverResp.data[0]
     for (let i = 0; i < choiceList.length; i++){
         let choice = choiceList[i]
-        console.log(choice)
         $choiceContainer.append(createChoiceCard(choice))
     }
 }

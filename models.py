@@ -52,18 +52,19 @@ class Game(db.Model):
     started = db.Column(db.Boolean, default=False)
     host_username = db.Column(db.String(20), db.ForeignKey("hosts.username", ondelete="cascade"), unique=True)
     curr_question_num = db.Column(db.Integer, default = 0, nullable = True)
+
     
     players = db.relationship("Player", backref="game", cascade="all, delete")
-    questions = db.relationship("Question", backref="game", cascade="all, delete")
+    questions = db.relationship("Question", backref="game", cascade="all, delete", order_by='asc(Question.id)')
 
-
-    def get_curr_question(self):
+    @property
+    def curr_question(self):
         """Return current Question Object"""
         if len(self.questions) > self.curr_question_num:
             return self.questions[self.curr_question_num]
         else:
             return None
-
+        
 
     @property
     def player_count(self):
@@ -116,7 +117,7 @@ class Response(db.Model):
     __tablename__ = 'responses'
 
     def __repr__(self):
-        return f"Question: {self.text}, Answer: {self.answer}"
+        return f"Question: {self.question_id}, Player: {self.player_id}"
 
     _text = db.Column(db.String(40))
     player_id = db.Column(db.Integer, db.ForeignKey(
@@ -150,11 +151,12 @@ class Question(db.Model):
         return f"Question: {self.text}, Answer: {self.answer}"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    text = db.Column(db.String(300), nullable=False)
-    _answer = db.Column(db.String(50), nullable=False)
+    text = db.Column(db.String(400), nullable=False)
+    _answer = db.Column(db.String(100), nullable=False)
     game_id = db.Column(db.Integer, db.ForeignKey("games.id"), nullable=False)
     start_time = db.Column(db.Integer, default = 0, nullable = False)
-    stage = db.Column(db.String(50), default = "response", nullable=False)
+    stage = db.Column(db.String(20), default = "response", nullable=False)
+    votes = db.Column(db.Integer, default = 0, nullable=False)
     responses = db.relationship(
         "Response", backref="question", cascade="all, delete")
 
@@ -172,16 +174,24 @@ class Question(db.Model):
     
     @property
     def all_responses_in(self):
-        return len(self.responses) == len(self.game.players)
+        print(len(self.responses))
+        return len(self.responses) == self.game.player_count
+    
+    @property
+    def all_votes_in(self):
+        return self.votes == self.game.player_count
     
     
     def update_stage(self,stage=None):
         if (stage == None):
-            if (self.time_elapsed >= 90):
+            if ((self.time_elapsed >= 90) or (self.stage == "answer")):
                 self.stage = "answer"
-                    
-            elif ((self.time_elapsed >= 60) and (self.time_elapsed < 90)):
-                self.stage = "voting"
+                
+            elif (((self.time_elapsed >= 60) and (self.time_elapsed < 90)) or (self.stage == "voting")):
+                if(self.all_votes_in):
+                    self.stage = "answer"
+                else:
+                    self.stage = "voting"
                 
             elif (self.time_elapsed < 60):
                 if(self.all_responses_in):

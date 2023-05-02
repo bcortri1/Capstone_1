@@ -11,79 +11,88 @@ let responseTime = false;
 let answerTime = false;
 let gameContinue = null;
 let currQuestion ="";
+let waitTime = true;
 
 
 
 async function gameHostMain() {
-//Will get the current question Info and time
-    
-
-    setInterval(async function(){
-        currQuestion = await getCurrQuestion()
-        qId = currQuestion.qId;
-        qText = currQuestion.qText;
-        qAnswer = currQuestion.qAnswer;
-        qTimer = currQuestion.qTimer;
-        qStage = currQuestion.qStage;
 
 
-        if (gameEnd != true){
-            if ((qStage === "answer") || (answerTime === true)){
-                if (answerTime != true){
-                    answerTime = true
-                    votingTime = false;
+    hostInterval = setInterval(async function(){
+            if (gameEnd != true) {
 
-                    setTimeout(function(){
-                        $("#answer").attr("style", " border-color: rgb(255,215,0);")
-                    },5000)
+                currQuestion = await getCurrQuestion()
+                qId = currQuestion.qId;
+                qText = currQuestion.qText;
+                qAnswer = currQuestion.qAnswer;
+                qTimer = currQuestion.qTimer;
+                qStage = currQuestion.qStage;
 
-                    setTimeout( async function(){
-                        $(".response").addClass("slide-out-down")
-                        $(".question").addClass("slide-out-down")
 
-                        setTimeout(function(){
-                            $(".response").remove()
-                            $(".question").remove()
-                        ,2000})
+                if ((qStage === "answer")){
+                    if (answerTime != true){
+                        answerTime = true
+                        votingTime = false;
+                            setTimeout(function(){
+                                $("#answer").attr("style", " border-color: rgb(255,215,0);");
+                            },1000)
 
-                        gameContinue = await nextQuestion(qId)
-                    }, 10000)
+                            setTimeout(function(){
+                                $gameContainer.addClass("slide-out-down");
+                            },7000)
 
-                    
-                    if (gameContinue != "Game Over"){
-                        answerTime = false
+                            setTimeout(function(){
+                                $gameContainer.removeClass("slide-out-down");
+                                $responseContainer.empty();
+                                $questionContainer.empty();
+
+                            },9000)
+
+                            
+                            setTimeout( async function(){
+                                gameContinue = await nextQuestion(qId)
+                                if (gameContinue != "Game Over"){
+                                    answerTime = false;
+                                }
+                                else{
+                                    gameEnd = true;
+                                }
+
+                            },10000)
+
                     }
-                    else{
-                        gameEnd = true
+                }
+                else if ((qStage === "voting")){
+                    if (votingTime != true){
+                        appendResponses($(".question").attr("id"))
+                        votingTime = true
+                        responseTime = false
                     }
-                }
-            }
-            else if ((qStage === "voting") || (votingTime === true)){
-                if (votingTime != true){
-                    appendResponses($(".question").attr("id"))
-                    votingTime = true
-                    responseTime = false
-                }
-                $gameTimer.hide();
-            }
-            else if ((qStage === "response") || (responseTime === true)) {
-                if (responseTime != true){
-                    $questionContainer.append(createQuestionCard(qId,qText));
-                    $gameTimer.show();
-                    responseTime = true
-                }
-                timerAnimation($("#timer"), Number(qTimer), Number(60));
-                    
-            }
-            else {
-                gameEnd = true;
-            }
-        }
-        else{
-            endGame()
-        }
 
-    },2000)
+                    $gameTimer.hide();
+                }
+                else if ((qStage === "response")) {
+                    if (responseTime != true){
+                        $questionContainer.append(createQuestionCard(qId,qText));
+                        $gameTimer.show();
+                        responseTime = true
+                    }
+                    timerAnimation($("#timer"), Number(qTimer), Number(60));
+                        
+                }
+                else {
+                    gameEnd = true;
+                }
+            }
+            else{
+                serverResp = await endGame()
+                showPlayerScore(serverResp)
+                setInterval(function(){
+                    window.location.replace("./game/select");
+                },10000)
+                clearInterval(hostInterval)
+            }
+    },3000)
 
 }
 
@@ -91,7 +100,7 @@ async function gameHostMain() {
 //Ends Game
 async function endGame(){
     let serverResp = await axios.get("/game/end")
-    showPlayerScore(serverResp)
+    return serverResp
 }
 
 
@@ -100,17 +109,18 @@ async function nextQuestion(qId){
     let serverResp = await axios.post("/game/next",{
         qId:qId
     })
-    return serverResp.data
+    return serverResp.data.message
 }
 
 //Returns an Object with all necessary question Info
 async function getCurrQuestion(){
     let serverResp = await axios.get("/game/question")
-    qId = serverResp.data.qId
-    qText = serverResp.data.qText
-    qAnswer = serverResp.data.qAnswer
-    qTimer = serverResp.data.qTimer
-    qStage = serverResp.data.qStage
+    let qId = serverResp.data.qId
+    let qText = serverResp.data.qText
+    let qAnswer = serverResp.data.qAnswer
+    let qTimer = serverResp.data.qTimer
+    let qStage = serverResp.data.qStage
+    console.log({qId: qId, qText: qText, qAnswer: qAnswer, qTimer: qTimer, qStage: qStage})
     return {qId: qId, qText: qText, qAnswer: qAnswer, qTimer: qTimer, qStage: qStage}
 
 }
@@ -149,7 +159,7 @@ function createResponseCard(serverResp){
 
 
 //Creates and returns a JQuery Player Card
-function createPlayerCard($playerCard){
+function createPlayerCard($playerCard, player){
     let $playerRow1= $("<div>").addClass("row")
     let $playerCol1= $("<div>").addClass("col-5")
 
@@ -160,7 +170,7 @@ function createPlayerCard($playerCard){
                         .attr("src", `/static/assets/pictures/${player.num}.png`)
                         .attr("alt", `Player${player.num} Picture`)
 
-    let $playerRow2= $("<div>").addClass("row")
+
     let $playerCol2= $("<div>").addClass("col-7")
 
     let $playerText = $("<h4>").text(`${player.name}`)
@@ -171,10 +181,10 @@ function createPlayerCard($playerCard){
     $playerCol2.append($playerText).append($playerScore)
 
     $playerRow1.append($playerCol1)
-    $playerRow2.append($playerCol2)
+    $playerRow1.append($playerCol2)
 
 
-    $playerCard.append($playerRow1).append($playerRow2)
+    $playerCard.append($playerRow1)
 
     return $playerCard
 
@@ -187,17 +197,17 @@ function showPlayerScore(serverResp){
         if (i == 0){
             let $playerCard = $("<div>")
                             .attr("id", `${player.id}`)
-                            .addClass("card text-white text-center m-3 m-autos")
-                            .attr("style","background-color:ffd700;")
+                            .addClass("card bg-dark text-white text-center m-3 m-autos")
+                            .attr("style","border-color:#ffd700;")
 
-            $responseContainer.append(createPlayerCard($playerCard))
+            $responseContainer.append(createPlayerCard($playerCard, player))
         }
         else{
             let $playerCard = $("<div>")
                             .attr("id", `${player.id}`)
                             .addClass("card bg-dark text-white text-center m-3 m-autos")
 
-            $responseContainer.append(createPlayerCard($playerCard))
+            $responseContainer.append(createPlayerCard($playerCard, player))
         }
     }
 }
@@ -252,23 +262,17 @@ function timerAnimation($timerObj, currentTime, targetTime){
 
 //As soon as page fully loads *****PUT AT END OF DOC*****
 $(document).ready(async function () {
-    let playerJoinPoll = setInterval( async function(){
-        let serverResp = await axios.get(`/game/players`)
-        serverResp.data.forEach(player => {
-            playerJoined(player)
-        });
-
-        if ((serverResp.data.length >= 8) || gameStart === true){
-            clearInterval(playerJoinPoll)
-        }
-
-    }, 2000);
 
     //Polls every 3 seconds until game starts, then begins the game
-    let startGamePoll = setInterval(async function(){
+    startGamePoll = setInterval(async function(){
         let serverResp = await axios.get(`/game/status`)
         gameStart = serverResp.data.gameStart
         playerCount = serverResp.data.playerCount
+        let sResp = await axios.get(`/game/players`)
+        sResp.data.forEach(player => {
+            playerJoined(player)
+        });
+
 
         if (gameStart === true){
             $startContainer.addClass("slide-out-down");
