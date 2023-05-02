@@ -108,7 +108,7 @@ def get_player_scores():
     elif (g.player != None):
         game = g.player.game
     if (game != None):
-        players = Player.query.where(Player.game_id == game.id).order_by(Player.score)
+        players = Player.query.where(Player.game_id == game.id).order_by(Player.score.desc())
         player_ordered = [player.serialize() for player in players]
         return player_ordered
     else:
