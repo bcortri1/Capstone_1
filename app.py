@@ -118,8 +118,8 @@ def get_player_scores():
 
 
 def get_facts():
-    """Returns a list of 2 different facts, increasing later"""
-    limit = 3
+    """Returns a list of 5 different facts, increasing later"""
+    limit = 5
     api_url = f'https://api.api-ninjas.com/v1/facts?limit={limit}'
     response = requests.get(api_url, headers={'X-Api-Key': API_KEY})
     if response.status_code == requests.codes.ok:
