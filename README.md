@@ -50,7 +50,7 @@ Scoring, is handled solely host-side
 
 **Future Ideas**
 
-Adding additional games (Drawful for example) or game variants. (Can be added in Capstone 2)
+Adding additional games (Drawful for example) or game variants.
 
 An ability for the host to have custom facts or a trivia mode.
 
